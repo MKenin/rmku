@@ -1,11 +1,15 @@
 using System;
 using System.Buffers;
+using System.Buffers.Binary;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
+using Amp.Framing;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Amp
 {
@@ -13,6 +17,7 @@ namespace Amp
     {
         private readonly string _server;
         private readonly ushort _port;
+        private readonly Dictionary<ushort, IChannel> _channels = new Dictionary<ushort, IChannel>();
 
         public Connection(string server, ushort port = 5672)
         {
@@ -22,30 +27,19 @@ namespace Amp
 
         public async Task Open()
         {
+            _channels.Add(0, new MainChannel());
             // open socket
             //TODO: proper disposable handling
             var socket = await Connect();
-            var process = ProcessLinesAsync(socket);
-            byte[] head =
-            {
-                (byte)'A',
-                (byte)'M',
-                (byte)'Q',
-                (byte)'P',
-                0,
-                0,
-                9,
-                1
-            };
-            socket.Send(head);
+            var process = ProcessLinesAsync(socket, _channels);
             await process;
         }
 
-        static async Task ProcessLinesAsync(Socket socket)
+        static async Task ProcessLinesAsync(Socket socket, IReadOnlyDictionary<ushort, IChannel> handlers)
         {
-            var pipe = new Pipe();
+            var pipe = new Pipe(new PipeOptions());
             Task writing = FillPipeAsync(socket, pipe.Writer);
-            Task reading = ReadPipeAsync(pipe.Reader);
+            Task reading = ReadPipeAsync(handlers, pipe.Reader);
 
             await Task.WhenAll(reading, writing);
         }
@@ -77,7 +71,7 @@ namespace Amp
             writer.Complete();
         }
 
-        static async Task ReadPipeAsync(PipeReader reader)
+        static async Task ReadPipeAsync(IReadOnlyDictionary<ushort, IChannel> handlers, PipeReader reader)
         {
             while (true)
             {
@@ -86,8 +80,13 @@ namespace Amp
 
                 while (buffer.TryReadFrame(out Frame frame))
                 {
-                    HandleFrame(frame);
-                    var nextPart = buffer.GetPosition(frame.Length + 8);
+                    //TODO: proper memory management instead of copy
+                    byte[] frameBytes = new byte[frame.ContentLength];
+                    buffer.Slice(Protocol.HeaderSize, frame.ContentLength).CopyTo(frameBytes);
+
+                    handlers[frame.Channel].Handle(frame, frameBytes);
+
+                    var nextPart = buffer.GetPosition(frame.TotalLength);
                     buffer = buffer.Slice(nextPart);
                 };
 
@@ -98,27 +97,6 @@ namespace Amp
             }
             reader.Complete();
         }
-
-        private static void HandleFrame(Frame frame)
-        {
-            Console.WriteLine($"Got frame {frame.Type} with length {frame.Length}");
-        }
-
-        private static void ProcessFrame(Byte type, Int16 channel, Int32 size, ReadOnlySpan<byte> readOnlySequence)
-        {
-            StringBuilder sb = new StringBuilder(size + 7);
-
-            sb.AppendFormat("Recieved frame type {0}", type);
-            sb.AppendFormat(" on channel {0}", channel);
-            sb.AppendFormat(" of size {0}.", size);
-
-            sb.AppendFormat(" with content: ");
-            var bytes = readOnlySequence.ToArray();
-            sb.Append(BitConverter.ToString(bytes));
-
-            Console.WriteLine(sb.ToString());
-        }
-
         private async Task<Socket> Connect()
         {
             IPAddress[] addresses = await Dns.GetHostAddressesAsync(_server);
@@ -145,22 +123,25 @@ namespace Amp
         public static bool TryReadFrame(ref this ReadOnlySequence<byte> buffer, out Frame frame)
         {
             frame = default;
+
             if (buffer.Length < 7)
                 return false;
 
-            SequenceReader<byte> reader = new SequenceReader<byte>(buffer);
-            var span = reader.UnreadSpan;
+            var reader = new SequenceReader<byte>(buffer);
+            reader.TryRead(out byte type);
 
-            // all those are uint
-            reader.TryRead(out Byte type);
-            reader.TryReadBigEndian(out Int16 channel);
-            reader.TryReadBigEndian(out Int32 size);
+            var spanToRead = reader.UnreadSpan;
+            ushort channel = BinaryPrimitives.ReadUInt16BigEndian(reader.UnreadSpan);
+            reader.Advance(2);
 
-            if (buffer.Length < size + 8)
-                return false;
-
+            uint size = BinaryPrimitives.ReadUInt32BigEndian(reader.UnreadSpan);
+            reader.Advance(size + 4);
             reader.TryRead(out byte frameEnd);
-            frame = new Frame(type, (ushort)channel, size);
+            if (frameEnd != Protocol.FrameEnd)
+                //TODO: proper error handling
+                throw new Exception("Protocol exception");
+
+            frame = new Frame(type, channel, size);
             return true;
         }
     }
@@ -169,13 +150,13 @@ namespace Amp
     {
         public FrameType Type { get; }
         public ushort Channel { get; }
-        public long Length { get; }
-
+        public long ContentLength { get; }
+        public long TotalLength { get { return ContentLength + Protocol.HeaderSize + Protocol.EndFrameSize; } }
         public Frame(byte type, ushort channel, long length)
         {
             Type = (FrameType)type;
             Channel = channel;
-            Length = length;
+            ContentLength = length;
         }
     }
 
