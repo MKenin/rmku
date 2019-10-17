@@ -4,9 +4,10 @@ using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Amp.Framing;
+using rmku.Protocol;
+using rmku.Framing;
 
-namespace Amp
+namespace rmku.Connectivity
 {
 	internal class MainChannel : IChannel
 	{
@@ -33,6 +34,7 @@ namespace Amp
 			ushort methodId = BinaryPrimitives.ReadUInt16BigEndian(body.FirstSpan);
 			body = body.Slice(2);
 			string bt = Convert.ToBase64String(body.FirstSpan);
+			
 			if (methodHandle == Method.Connection.Start)
 			{
 				if (_currentState != ConnectionState.WaitForStart)
@@ -41,6 +43,7 @@ namespace Amp
 
 				socket.Send(new byte[0]);
 			}
+
 			return new ValueTask();
 		}
 

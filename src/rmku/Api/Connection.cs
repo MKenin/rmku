@@ -1,14 +1,15 @@
 using System;
 using System.Buffers;
-using System.Buffers.Binary;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
-using Amp.Framing;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using rmku.Protocol;
+using rmku.Connectivity;
+using rmku.Framing;
 
-namespace Amp
+namespace rmku
 {
 	public class Connection
 	{
@@ -28,7 +29,8 @@ namespace Amp
 			//TODO: proper disposable handling
 			var socket = await Connect();
 			var sChannel = new MainChannel(socket);
-			_channels.Add(0, sChannel);
+			
+			_channels.Add(0, (IChannel)sChannel);
 
 			var comms = ProcessLinesAsync(socket, _channels);
 			sChannel.KickOff();
@@ -81,7 +83,7 @@ namespace Amp
 				while (buffer.TryReadFrame(out Frame frame))
 				{
 					//TODO: proper memory management instead of copy
-					var slice = buffer.Slice(Protocol.HeaderSize, frame.ContentLength);
+					var slice = buffer.Slice(Constants.HeaderSize, frame.ContentLength);
 
 					await handlers[frame.Channel].Handle(frame, ref slice);
 
@@ -116,55 +118,5 @@ namespace Amp
 			await socket.ConnectAsync(address);
 			return socket;
 		}
-	}
-
-	internal static class NetHelper
-	{
-		public static bool TryReadFrame(ref this ReadOnlySequence<byte> buffer, out Frame frame)
-		{
-			frame = default;
-
-			if (buffer.Length < 7)
-				return false;
-
-			var reader = new SequenceReader<byte>(buffer);
-			reader.TryRead(out byte type);
-
-			var spanToRead = reader.UnreadSpan;
-			ushort channel = BinaryPrimitives.ReadUInt16BigEndian(reader.UnreadSpan);
-			reader.Advance(2);
-
-			uint size = BinaryPrimitives.ReadUInt32BigEndian(reader.UnreadSpan);
-			reader.Advance(size + 4);
-			reader.TryRead(out byte frameEnd);
-			if (frameEnd != Protocol.FrameEnd)
-				//TODO: proper error handling
-				throw new Exception("Protocol exception");
-
-			frame = new Frame(type, channel, size);
-			return true;
-		}
-	}
-
-	internal struct Frame
-	{
-		public FrameType Type { get; }
-		public ushort Channel { get; }
-		public long ContentLength { get; }
-		public long TotalLength { get { return ContentLength + Protocol.HeaderSize + Protocol.EndFrameSize; } }
-		public Frame(byte type, ushort channel, long length)
-		{
-			Type = (FrameType)type;
-			Channel = channel;
-			ContentLength = length;
-		}
-	}
-
-	internal enum FrameType : byte
-	{
-		Method = 1,
-		Header = 2,
-		Body = 3,
-		Heartbeat = 4
 	}
 }

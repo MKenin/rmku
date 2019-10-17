@@ -1,6 +1,6 @@
 using System;
 
-namespace Amp
+namespace rmku.Framing
 {
 	internal static class MethodReader
 	{

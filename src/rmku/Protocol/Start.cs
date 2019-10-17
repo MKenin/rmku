@@ -1,4 +1,6 @@
-namespace Amp
+using rmku.Protocol.Primitives;
+
+namespace rmku.Protocol
 {
 	internal struct Start
 	{

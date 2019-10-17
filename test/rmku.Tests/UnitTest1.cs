@@ -1,7 +1,7 @@
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Amp.Tests
+namespace rmku.Tests
 {
 	[TestClass]
 	public class UnitTest1

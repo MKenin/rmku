@@ -1,7 +1,8 @@
 using System.Buffers;
 using System.Threading.Tasks;
+using rmku.Framing;
 
-namespace Amp
+namespace rmku.Connectivity
 {
 	internal interface IChannel
 	{
