@@ -4,9 +4,6 @@ using System.Buffers.Binary;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
 using Amp.Framing;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -27,12 +24,15 @@ namespace Amp
 
 		public async Task Open()
 		{
-			_channels.Add(0, new MainChannel());
 			// open socket
 			//TODO: proper disposable handling
 			var socket = await Connect();
-			var process = ProcessLinesAsync(socket, _channels);
-			await process;
+			var sChannel = new MainChannel(socket);
+			_channels.Add(0, sChannel);
+
+			var comms = ProcessLinesAsync(socket, _channels);
+			sChannel.KickOff();
+			await comms;
 		}
 
 		static async Task ProcessLinesAsync(Socket socket, IReadOnlyDictionary<ushort, IChannel> handlers)
@@ -81,10 +81,9 @@ namespace Amp
 				while (buffer.TryReadFrame(out Frame frame))
 				{
 					//TODO: proper memory management instead of copy
-					byte[] frameBytes = new byte[frame.ContentLength];
-					buffer.Slice(Protocol.HeaderSize, frame.ContentLength).CopyTo(frameBytes);
+					var slice = buffer.Slice(Protocol.HeaderSize, frame.ContentLength);
 
-					handlers[frame.Channel].Handle(frame, frameBytes);
+					await handlers[frame.Channel].Handle(frame, ref slice);
 
 					var nextPart = buffer.GetPosition(frame.TotalLength);
 					buffer = buffer.Slice(nextPart);
@@ -97,6 +96,7 @@ namespace Amp
 			}
 			reader.Complete();
 		}
+
 		private async Task<Socket> Connect()
 		{
 			IPAddress[] addresses = await Dns.GetHostAddressesAsync(_server);

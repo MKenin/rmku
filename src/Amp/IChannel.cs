@@ -1,11 +1,10 @@
-
-using System;
 using System.Buffers;
+using System.Threading.Tasks;
 
 namespace Amp
 {
 	internal interface IChannel
 	{
-		void Handle(Frame frame, Span<byte> body);
+		ValueTask Handle(Frame frame, ref ReadOnlySequence<byte> body);
 	}
 }
