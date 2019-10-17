@@ -1,0 +1,1 @@
+rmku is a .Net client library for [RabbitMQ](https://www.rabbitmq.com) that focuses on performance and efficient memory management provided by new shiny things .net core 3.0 brings to the table.
