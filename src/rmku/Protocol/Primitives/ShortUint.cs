@@ -1,10 +1,10 @@
 namespace rmku.Protocol.Primitives
 {
-	internal struct ShortUint
+	internal struct ShortUInt
 	{
 		public ushort Value { get; }
 		
-		public ShortUint(ushort value)
+		public ShortUInt(ushort value)
 		{
 			Value = value;
 		}

@@ -1,6 +1,12 @@
 namespace rmku.Protocol.Primitives
 {
-	internal class Table
+	internal struct Table
 	{
+		public object[] FieldValuePairs { get; }
+
+		public Table(object[] fieldValuePairs)
+		{
+			FieldValuePairs = fieldValuePairs;
+		}
 	}
 }

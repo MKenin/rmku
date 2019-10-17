@@ -6,7 +6,7 @@ namespace rmku.Protocol
 {
 	internal static class Amqp
 	{
-		public static ShortUint ReadShortUint(ref ReadOnlySequence<byte> data)
+		public static ShortUInt ReadShortUint(ref ReadOnlySequence<byte> data)
 		{
 			throw new NotImplementedException();
 		}
