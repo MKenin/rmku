@@ -79,7 +79,7 @@ namespace rmku
 			{
 				ReadResult result = await reader.ReadAsync();
 				ReadOnlySequence<byte> buffer = result.Buffer;
-
+				
 				while (buffer.TryReadFrame(out Frame frame))
 				{
 					//TODO: proper memory management instead of copy

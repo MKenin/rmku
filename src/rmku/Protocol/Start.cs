@@ -4,10 +4,19 @@ namespace rmku.Protocol
 {
 	internal struct Start
 	{
-		public ushort VersionMajor { get; }
-		public ushort VersionMinor { get; }
+		public byte VersionMajor { get; }
+		public byte VersionMinor { get; }
 		public Table ServerProperties { get; }
-		public string Mechanisms { get; }
-		public string Locales { get; }
+		public LongString Mechanisms { get; }
+		public LongString Locales { get; }
+
+		public Start(byte versionMajor, byte versionMinor, Table serverProperties, LongString mechanisms, LongString locales)
+		{
+			VersionMajor = versionMajor;
+			VersionMinor = versionMinor;
+			ServerProperties = serverProperties;
+			Mechanisms = mechanisms;
+			Locales = locales;
+		}
 	}
 }

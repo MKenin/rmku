@@ -29,17 +29,14 @@ namespace rmku.Connectivity
 		{
 			Debug.Assert(frame.Type == FrameType.Method, "Main channel should onle handle Methods");
 			uint methodHandle = BinaryPrimitives.ReadUInt32BigEndian(body.FirstSpan);
-			ushort classId = BinaryPrimitives.ReadUInt16BigEndian(body.FirstSpan);
-			body = body.Slice(2);
-			ushort methodId = BinaryPrimitives.ReadUInt16BigEndian(body.FirstSpan);
-			body = body.Slice(2);
-			string bt = Convert.ToBase64String(body.FirstSpan);
+			body = body.Slice(sizeof(uint));
 			
 			if (methodHandle == Method.Connection.Start)
 			{
 				if (_currentState != ConnectionState.WaitForStart)
 					throw new Exception();
-				var start = MethodReader.ParseStart(body.FirstSpan);
+				
+				Start start = Amqp.ReadStart(ref body);
 
 				socket.Send(new byte[0]);
 			}

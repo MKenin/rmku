@@ -1,17 +1,19 @@
 using System;
+using System.Diagnostics;
 
 namespace rmku.Protocol.Primitives
 {
+	[DebuggerDisplay("{System.Text.Encoding.ASCII.GetString(Value)}")]
 	internal struct ShortString
 	{
-		public string Value { get; }
+		public byte[] Value { get; }
 
-		public ShortString(string value)
+		public ShortString(byte[] value)
 		{
 			if(value.Length > Constants.ShortStringLength)
 				throw new ArgumentException(nameof(value));
-
-			Value = value;
+				
+			Value = value;			
 		}
 	}
 }

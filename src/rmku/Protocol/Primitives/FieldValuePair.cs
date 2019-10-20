@@ -17,14 +17,4 @@ namespace rmku.Protocol.Primitives
 			FieldValue = new FieldValue<T>(value);
 		}
 	}
-
-	internal struct FieldValue<T>
-	{
-		public T Value { get; }
-
-		public FieldValue(T value)
-		{
-			Value = value;
-		}
-	}
 }
