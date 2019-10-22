@@ -1,5 +1,5 @@
 using System;
-using rmku.Protocol;
+using rmku.Protocol.Connection;
 
 namespace rmku.Framing
 {

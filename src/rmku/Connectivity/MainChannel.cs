@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using rmku.Protocol;
+using rmku.Protocol.Connection;
 using rmku.Framing;
 
 namespace rmku.Connectivity

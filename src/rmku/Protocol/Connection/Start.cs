@@ -1,6 +1,6 @@
 using rmku.Protocol.Primitives;
 
-namespace rmku.Protocol
+namespace rmku.Protocol.Connection
 {
 	internal struct Start
 	{

@@ -2,8 +2,9 @@ using System;
 using System.Buffers;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
-using rmku.Protocol.Primitives;
 using System.Collections.Generic;
+using rmku.Protocol.Primitives;
+using rmku.Protocol.Connection;
 
 namespace rmku.Protocol
 {
